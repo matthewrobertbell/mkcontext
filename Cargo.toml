@@ -1,0 +1,11 @@
+[package]
+name = "mkcontext"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+clap = "3.0"
+tiktoken-rs = "0.5.7"
+clipboard = "0.5.0"
+glob = "0.3"
+anyhow = "1.0"
