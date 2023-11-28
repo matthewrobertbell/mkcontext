@@ -47,21 +47,18 @@ fn main() -> Result<()> {
                         let file_content = fs::read_to_string(&path)
                             .with_context(|| format!("Failed to read file: {}", path.display()))?;
 
-                        let new_token_count = bpe.encode_with_special_tokens(&file_content).len();
+                        let file_context = format!(
+                            "File name: \"{}\"\n\nFile contents: \"\"\"\n{}\"\"\"\n----------\n\n",
+                            path.display(),
+                            file_content
+                        );
+
+                        let new_token_count = bpe.encode_with_special_tokens(&file_context).len();
                         if current_token_count + new_token_count > token_limit {
                             return Err(anyhow::anyhow!("Error: Token limit exceeded"));
                         }
 
-                        content.push_str(&format!(
-                            r#"File name: """"{}"""
-                            
-                            File contents: """{}"""
-                            
-                            ————
-                            "#,
-                            path.display(),
-                            file_content
-                        ));
+                        content.push_str(&file_context);
                         current_token_count += new_token_count;
                     }
                     Err(e) => return Err(anyhow::anyhow!("Glob error: {:?}", e)),
