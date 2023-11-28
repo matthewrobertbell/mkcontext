@@ -44,6 +44,9 @@ fn main() -> Result<()> {
             {
                 match entry {
                     Ok(path) => {
+                        if path.is_dir() {
+                            continue;
+                        }
                         let file_content = fs::read_to_string(&path)
                             .with_context(|| format!("Failed to read file: {}", path.display()))?;
 
