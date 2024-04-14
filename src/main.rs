@@ -7,7 +7,7 @@ use glob::glob;
 use tiktoken_rs::cl100k_base;
 
 #[derive(Parser)]
-#[clap(version = "0.2.0")]
+#[clap(version = "0.2.1")]
 struct Opt {
     /// Glob patterns to process
     patterns: Vec<String>,
