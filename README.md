@@ -73,8 +73,3 @@ Contributions to `mkcontext` are welcome. Please ensure that your code adheres t
 ## Contact
 
 For questions or suggestions regarding `mkcontext`, please open an issue on the GitHub repository.
-
-## Acknowledgements
-
-`mkcontext` was created to assist in building context for OpenAI's ChatGPT. Special thanks to the OpenAI community for their continuous support and feedback.
-```
