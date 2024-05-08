@@ -9,7 +9,7 @@ use rayon::prelude::*;
 use tiktoken_rs::cl100k_base;
 
 #[derive(Parser)]
-#[clap(version = "0.4.1")]
+#[clap(version = "0.4.2")]
 struct Opt {
     /// Glob patterns to process
     patterns: Vec<String>,
