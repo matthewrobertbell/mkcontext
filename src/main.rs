@@ -9,7 +9,7 @@ use rayon::prelude::*;
 use tiktoken_rs::cl100k_base;
 
 #[derive(Parser)]
-#[clap(version = "0.4")]
+#[clap(version = "0.4.1")]
 struct Opt {
     /// Glob patterns to process
     patterns: Vec<String>,
@@ -42,11 +42,15 @@ fn main() -> Result<()> {
                 );
                 let new_token_count = bpe.encode_with_special_tokens(&file_context).len();
                 let mut current_token_count = current_token_count.lock().unwrap();
+
                 if *current_token_count + new_token_count > opt.token_limit {
                     return Err(anyhow::anyhow!("Error: Token limit exceeded"));
                 }
-                content.lock().unwrap().push_str(&file_context);
-                *current_token_count += new_token_count;
+                if *current_token_count > 0 {
+                    content.lock().unwrap().push_str(&file_context);
+                    *current_token_count += new_token_count;
+                }
+
                 Ok(())
             })
     })?;
