@@ -9,7 +9,7 @@ use rayon::prelude::*;
 use tiktoken_rs::cl100k_base;
 
 #[derive(Parser)]
-#[clap(version = "0.3")]
+#[clap(version = "0.4")]
 struct Opt {
     /// Glob patterns to process
     patterns: Vec<String>,
@@ -36,7 +36,7 @@ fn main() -> Result<()> {
                 let file_content = fs::read_to_string(&path)
                     .with_context(|| format!("Failed to read file: {}", path.display()))?;
                 let file_context = format!(
-                    "File name: \"{}\"\\n\\nFile contents: \"\"\"\\n{}\"\"\"\\n----------\\n\\n",
+                    r#"File name: "{}"\n\nFile contents: """\n{}"""\n----------\n\n"#,
                     path.display(),
                     file_content
                 );
@@ -60,7 +60,8 @@ fn main() -> Result<()> {
 
     let mut ctx: ClipboardContext =
         ClipboardProvider::new().map_err(|e| anyhow::anyhow!(e.to_string()))?;
-    ctx.set_contents(content.into_inner().unwrap())
+    let clipboard_content = content.into_inner().unwrap().replace("\\n", "\r\n");
+    ctx.set_contents(clipboard_content)
         .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
     println!("Success! Token count: {}", current_token_count);

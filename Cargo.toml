@@ -1,6 +1,6 @@
 [package]
 name = "mkcontext"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2018"
 description = "A crate that provides functionality for creating context"
 license = "MIT"
