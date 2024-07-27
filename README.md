@@ -1,75 +1,84 @@
+# mkcontext
 
-# mkcontext - Context Builder for ChatGPT
-
-## Overview
-
-`mkcontext` is a command-line tool written in Rust, designed to concatenate the contents of multiple files into a single string, primarily for building context to be used with OpenAI's ChatGPT. It supports glob patterns for file selection and maintains a token count to avoid exceeding a specified limit. The final concatenated string is copied to the clipboard for easy pasting.
+`mkcontext` is a command-line tool that generates context from files and command outputs, useful for large language models.
 
 ## Features
 
-- **Glob Pattern Support**: Accepts one or more glob patterns to specify the files to process.
-- **Token Count Limit**: Supports an optional token count limit with a default of 32,000 tokens.
-- **Clipboard Integration**: Automatically copies the final concatenated string to the clipboard.
-- **Error Handling**: Utilizes `anyhow` for robust error management.
+- Process multiple files using glob patterns
+- Execute shell commands and include their output
+- Tokenize content using OpenAI's tiktoken
+- Copy the generated context to the clipboard
+- Limit the total number of tokens
 
 ## Installation
 
-To use `mkcontext`, you need to have Rust and Cargo installed. Follow these steps to install and build the tool:
+To install `mkcontext`, you need to have Rust and Cargo installed on your system. Then, you can install it using:
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/matthewrobertbell/mkcontext.git
-   cd mkcontext
-   ```
-
-2. Build the project using Cargo:
-   ```bash
-   cargo build --release
-   ```
-
-3. The executable will be available in `target/release/mkcontext`.
-
-## Cargo Install Method
-
-Alternatively, you can install `mkcontext` directly using Cargo. This method will download and compile the source code automatically and place the executable in your Cargo bin path.
-
-1. Install directly from the repository:
-   ```bash
-   cargo install --git https://github.com/matthewrobertbell/mkcontext.git
-   ```
-
-2. Once installed, `mkcontext` can be run from anywhere on your system if your Cargo bin path is in your system's PATH.
-
-3. To update `mkcontext` in the future, simply rerun the install command. Cargo will replace the old version with the new one.
-
-Note: Ensure that you have Rust and Cargo installed and updated to the latest version for this method to work seamlessly.
+```
+cargo install mkcontext
+```
 
 ## Usage
 
-Run `mkcontext` with the required glob patterns. Optionally, specify a custom token limit using `--token-limit`.
-
-```bash
-mkcontext "path/to/files/*.txt" "another/path/*.md" --token-limit 50000
+```
+mkcontext [OPTIONS] <PATTERNS>...
 ```
 
-If the token limit is exceeded, `mkcontext` will output an error and terminate. Upon successful execution, it prints the token count and copies the content to the clipboard.
+### Arguments
 
-## Error Handling
+- `<PATTERNS>...`: Glob patterns to process (e.g., `*.rs`, `src/**/*.js`)
 
-The tool uses the `anyhow` crate for error handling, providing clear error messages for issues such as:
+### Options
 
-- Invalid glob patterns.
-- File read errors.
-- Exceeding the token limit.
+- `-t, --token-limit <TOKEN_LIMIT>`: Optional token limit (default: 32000)
+- `-c, --command <COMMAND>`: Commands to execute and include in the output (can be used multiple times)
+- `-h, --help`: Print help information
+- `-V, --version`: Print version information
 
-## Contributing
+## Examples
 
-Contributions to `mkcontext` are welcome. Please ensure that your code adheres to the project's standards and includes appropriate tests.
+1. Process all Rust files in the current directory:
+
+   ```
+   mkcontext *.rs
+   ```
+
+2. Process all JavaScript files in the `src` directory and its subdirectories, with a token limit of 16000:
+
+   ```
+   mkcontext -t 16000 src/**/*.js
+   ```
+
+3. Include the output of `git status` command in the context:
+
+   ```
+   mkcontext *.rs -c "git status"
+   ```
+
+4. Process Python files and include outputs from multiple commands:
+
+   ```
+   mkcontext *.py -c "pip list" -c "python --version"
+   ```
+
+5. Combine file processing and command execution:
+
+   ```
+   mkcontext src/**/*.rs tests/**/*.rs -c "cargo test" -c "rustc --version"
+   ```
+
+## How it works
+
+1. `mkcontext` processes the specified files matching the glob patterns.
+2. It executes any specified commands and captures their output.
+3. The content from files and command outputs is tokenized using the cl100k_base tokenizer.
+4. If the total number of tokens exceeds the specified limit, an error is returned.
+5. The generated context is copied to the clipboard.
+
+## Note
+
+The tool uses the system clipboard, so make sure you have the appropriate clipboard drivers installed for your operating system.
 
 ## License
 
-`mkcontext` is licensed under the MIT License. See the LICENSE file for more details.
-
-## Contact
-
-For questions or suggestions regarding `mkcontext`, please open an issue on the GitHub repository.
+This project is licensed under the MIT License.
