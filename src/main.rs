@@ -1,7 +1,7 @@
 use std::fs;
 use std::sync::Mutex;
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
 use clap::Parser;
 use clipboard::{ClipboardContext, ClipboardProvider};
 use glob::glob;
@@ -33,8 +33,17 @@ fn main() -> Result<()> {
                 if path.is_dir() {
                     return Ok(());
                 }
-                let file_content = fs::read_to_string(&path)
-                    .with_context(|| format!("Failed to read file: {}", path.display()))?;
+                let file_content = match fs::read_to_string(&path) {
+                    Ok(content) => content,
+                    Err(e) => {
+                        if e.kind() == std::io::ErrorKind::InvalidData {
+                            println!("Ignored non-UTF8 file: {}", path.display());
+                            return Ok(());
+                        } else {
+                            return Err(anyhow!("Failed to read file: {}", path.display())).with_context(|| e.to_string());
+                        }
+                    }
+                };
                 let file_context = format!(
                     r#"File name: "{}"\n\nFile contents: """\n{}"""\n----------\n\n"#,
                     path.display(),
