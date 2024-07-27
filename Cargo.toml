@@ -4,6 +4,7 @@ version = "0.5.0"
 edition = "2018"
 description = "A crate that provides functionality for creating context"
 license = "MIT"
+repository = "https://github.com/matthewrobertbell/mkcontext"
 
 [dependencies]
 clap = { version = "4.0", features = ["derive"] }
