@@ -68,9 +68,9 @@ fn main() -> Result<()> {
                 Ok(content) => content,
                 Err(e) => {
                     if e.kind() == std::io::ErrorKind::InvalidData {
-                        eprintln!("Ignored non-UTF8 file: {}", path.display());
+                        eprintln!("Ignored non-UTF8 file: {path_str}");
                     } else {
-                        eprintln!("Failed to read file: {}", path.display());
+                        eprintln!("Failed to read file: {path_str}");
                     }
                     continue;
                 }
