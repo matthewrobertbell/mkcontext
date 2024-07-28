@@ -10,7 +10,7 @@ use tiktoken_rs::cl100k_base;
 use walkdir::WalkDir;
 
 #[derive(Parser)]
-#[clap(version = "0.5.1")]
+#[clap(version = "0.7.0")]
 struct Opt {
     /// Optional token limit
     #[clap(short = 't', long, default_value = "200000")]
@@ -94,7 +94,7 @@ File contents: """
                 &bpe,
                 opt.token_limit,
             )?;
-            println!("Processed file: {path_str:<70} ({new_token_count:<6} tokens)");
+            println!("Processed file: {path_str:<70} - {new_token_count:>6} tokens");
         }
     }
 
@@ -118,7 +118,7 @@ Command output: """
             &bpe,
             opt.token_limit,
         )?;
-        println!("Executed command: {cmd:<67}  ({new_token_count:<6} tokens)");
+        println!("Executed command: {cmd:<67}  - {new_token_count:>6} tokens");
     }
 
     let current_token_count = *current_token_count.lock().unwrap();

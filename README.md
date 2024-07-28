@@ -9,7 +9,7 @@
 - Tokenize content using OpenAI's tiktoken
 - Copy the generated context to the clipboard
 - Limit the total number of tokens
-- Ignore specified paths or patterns
+- Include or exclude files based on glob patterns
 
 ## Installation
 
@@ -22,18 +22,14 @@ cargo install mkcontext
 ## Usage
 
 ```
-mkcontext [OPTIONS] <PATTERNS>...
+mkcontext [OPTIONS]
 ```
-
-### Arguments
-
-- `<PATTERNS>...`: Glob patterns to process (e.g., `*.rs`, `src/**/*.js`)
 
 ### Options
 
-- `-t, --token-limit <TOKEN_LIMIT>`: Optional token limit (default: 32000)
+- `-t, --token-limit <TOKEN_LIMIT>`: Optional token limit (default: 200000)
 - `-c, --command <COMMAND>`: Commands to execute and include in the output (can be used multiple times)
-- `--ignore-path <IGNORE_PATH>`: Paths or patterns to ignore (can be used multiple times)
+- `-g, --glob <GLOB>`: Glob patterns to include or exclude files (can be used multiple times)
 - `-h, --help`: Print help information
 - `-V, --version`: Print version information
 
@@ -42,55 +38,58 @@ mkcontext [OPTIONS] <PATTERNS>...
 1. Process all Rust files in the current directory:
 
    ```
-   mkcontext *.rs
+   mkcontext -g "*.rs"
    ```
 
 2. Process all JavaScript files in the `src` directory and its subdirectories, with a token limit of 16000:
 
    ```
-   mkcontext -t 16000 src/**/*.js
+   mkcontext -t 16000 -g "src/**/*.js"
    ```
 
 3. Include the output of `git status` command in the context:
 
    ```
-   mkcontext *.rs -c "git status"
+   mkcontext -g "*.rs" -c "git status"
    ```
 
 4. Process Python files and include outputs from multiple commands:
 
    ```
-   mkcontext *.py -c "pip list" -c "python --version"
+   mkcontext -g "*.py" -c "pip list" -c "python --version"
    ```
 
 5. Combine file processing and command execution:
 
    ```
-   mkcontext src/**/*.rs tests/**/*.rs -c "cargo test" -c "rustc --version"
+   mkcontext -g "src/**/*.rs" -g "tests/**/*.rs" -c "cargo test" -c "rustc --version"
    ```
 
-6. Ignore specific directories or file patterns:
+6. Exclude specific directories or file patterns:
 
    ```
-   mkcontext --ignore-path=node_modules --ignore-path=*.log src/**/*.js
+   mkcontext -g "src/**/*.js" -g "!node_modules/**" -g "!*.log"
    ```
 
 ## How it works
 
-1. `mkcontext` processes the specified files matching the glob patterns, excluding any paths or patterns specified by `--ignore-path`.
+1. `mkcontext` processes the specified files matching the include glob patterns, excluding any paths or patterns specified by exclude globs.
 2. It executes any specified commands and captures their output.
 3. The content from files and command outputs is tokenized using the cl100k_base tokenizer.
 4. If the total number of tokens exceeds the specified limit, an error is returned.
 5. The generated context is copied to the clipboard.
 
-## Ignore Paths
+## Glob Patterns
 
-The `--ignore-path` option allows you to specify paths or patterns to ignore during file processing. This is useful for excluding directories like `node_modules`, build artifacts, or specific file types. The ignore patterns follow the same syntax as `.gitignore` files.
+The `-g` or `--glob` option allows you to specify patterns to include or exclude files during processing. This is useful for selecting specific file types or excluding certain directories or files.
 
-You can use multiple `--ignore-path` options to specify several ignore patterns:
+- To include files, use a regular glob pattern: `-g "src/**/*.rs"`
+- To exclude files or directories, prefix the glob with `!`: `-g "!node_modules/**"`
+
+You can use multiple `-g` options to specify several include and exclude patterns:
 
 ```
-mkcontext --ignore-path=node_modules --ignore-path=*.log --ignore-path=build/ src/**/*.js
+mkcontext -g "src/**/*.js" -g "!node_modules/**" -g "!*.log" -g "!build/**"
 ```
 
 This will process all JavaScript files in the `src` directory and its subdirectories, while ignoring the `node_modules` directory, any `.log` files, and the `build/` directory.
