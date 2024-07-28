@@ -10,7 +10,7 @@ use tiktoken_rs::cl100k_base;
 use walkdir::WalkDir;
 
 #[derive(Parser)]
-#[clap(version = "0.7.0")]
+#[clap(version = "0.7.1")]
 struct Opt {
     /// Optional token limit
     #[clap(short = 't', long, default_value = "200000")]
