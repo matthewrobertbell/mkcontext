@@ -10,7 +10,7 @@ use tiktoken_rs::cl100k_base;
 use walkdir::WalkDir;
 
 #[derive(Parser)]
-#[clap(version = "0.7.1")]
+#[clap(version = "0.7.2")]
 struct Opt {
     /// Optional token limit
     #[clap(short = 't', long, default_value = "200000")]
@@ -84,8 +84,7 @@ File contents: """
 ----------
 
 "#,
-                path.display(),
-                file_content
+                path_str, file_content
             );
             let new_token_count = add_content(
                 &content,
