@@ -13,12 +13,12 @@ use walkdir::WalkDir;
 #[clap(version = "0.5.1")]
 struct Opt {
     /// Optional token limit
-    #[clap(short = 't', long, default_value = "32000")]
+    #[clap(short = 't', long, default_value = "200000")]
     token_limit: usize,
     /// Commands to execute and include in the output
     #[clap(long = "command", short = 'c')]
     commands: Vec<String>,
-    /// Paths to search (git ignore style)
+    /// Globs to search / exclude
     #[clap(long = "glob", short = 'g')]
     globs: Vec<String>,
 }
@@ -87,14 +87,14 @@ File contents: """
                 path.display(),
                 file_content
             );
-            add_content(
+            let new_token_count = add_content(
                 &content,
                 &current_token_count,
                 &file_context,
                 &bpe,
                 opt.token_limit,
             )?;
-            println!("Processed file: {}", path_str);
+            println!("Processed file: {path_str:<70} ({new_token_count:<6} tokens)");
         }
     }
 
@@ -111,14 +111,14 @@ Command output: """
 "#,
             cmd, output
         );
-        add_content(
+        let new_token_count = add_content(
             &content,
             &current_token_count,
             &command_context,
             &bpe,
             opt.token_limit,
         )?;
-        println!("Executed command: {}", cmd);
+        println!("Executed command: {cmd:<67}  ({new_token_count:<6} tokens)");
     }
 
     let current_token_count = *current_token_count.lock().unwrap();
@@ -144,7 +144,7 @@ fn add_content(
     new_content: &str,
     bpe: &tiktoken_rs::CoreBPE,
     token_limit: usize,
-) -> Result<()> {
+) -> Result<usize> {
     let new_token_count = bpe.encode_with_special_tokens(new_content).len();
     let mut current_token_count = current_token_count.lock().unwrap();
 
@@ -155,7 +155,7 @@ fn add_content(
         content.lock().unwrap().push_str(new_content);
         *current_token_count += new_token_count;
     }
-    Ok(())
+    Ok(new_token_count)
 }
 
 fn execute_command(cmd: &str) -> Result<String> {
