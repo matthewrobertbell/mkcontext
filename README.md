@@ -9,6 +9,7 @@
 - Tokenize content using OpenAI's tiktoken
 - Copy the generated context to the clipboard
 - Limit the total number of tokens
+- Ignore specified paths or patterns
 
 ## Installation
 
@@ -32,6 +33,7 @@ mkcontext [OPTIONS] <PATTERNS>...
 
 - `-t, --token-limit <TOKEN_LIMIT>`: Optional token limit (default: 32000)
 - `-c, --command <COMMAND>`: Commands to execute and include in the output (can be used multiple times)
+- `--ignore-path <IGNORE_PATH>`: Paths or patterns to ignore (can be used multiple times)
 - `-h, --help`: Print help information
 - `-V, --version`: Print version information
 
@@ -67,13 +69,31 @@ mkcontext [OPTIONS] <PATTERNS>...
    mkcontext src/**/*.rs tests/**/*.rs -c "cargo test" -c "rustc --version"
    ```
 
+6. Ignore specific directories or file patterns:
+
+   ```
+   mkcontext --ignore-path=node_modules --ignore-path=*.log src/**/*.js
+   ```
+
 ## How it works
 
-1. `mkcontext` processes the specified files matching the glob patterns.
+1. `mkcontext` processes the specified files matching the glob patterns, excluding any paths or patterns specified by `--ignore-path`.
 2. It executes any specified commands and captures their output.
 3. The content from files and command outputs is tokenized using the cl100k_base tokenizer.
 4. If the total number of tokens exceeds the specified limit, an error is returned.
 5. The generated context is copied to the clipboard.
+
+## Ignore Paths
+
+The `--ignore-path` option allows you to specify paths or patterns to ignore during file processing. This is useful for excluding directories like `node_modules`, build artifacts, or specific file types. The ignore patterns follow the same syntax as `.gitignore` files.
+
+You can use multiple `--ignore-path` options to specify several ignore patterns:
+
+```
+mkcontext --ignore-path=node_modules --ignore-path=*.log --ignore-path=build/ src/**/*.js
+```
+
+This will process all JavaScript files in the `src` directory and its subdirectories, while ignoring the `node_modules` directory, any `.log` files, and the `build/` directory.
 
 ## Note
 

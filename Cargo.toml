@@ -1,6 +1,6 @@
 [package]
 name = "mkcontext"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2018"
 description = "A crate that provides functionality for creating context"
 license = "MIT"
@@ -13,3 +13,4 @@ clipboard = "0.5.0"
 glob = "0.3"
 anyhow = "1.0"
 rayon = "1.5"
+ignore = "0.4"

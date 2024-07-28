@@ -5,12 +5,12 @@ use std::sync::Mutex;
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use clipboard::{ClipboardContext, ClipboardProvider};
-use glob::glob;
+use ignore::WalkBuilder;
 use rayon::prelude::*;
 use tiktoken_rs::cl100k_base;
 
 #[derive(Parser)]
-#[clap(version = "0.4.3")]
+#[clap(version = "0.5.1")]
 struct Opt {
     /// Glob patterns to process
     patterns: Vec<String>,
@@ -20,6 +20,9 @@ struct Opt {
     /// Commands to execute and include in the output
     #[clap(long = "command", short = 'c')]
     commands: Vec<String>,
+    /// Paths to ignore (git ignore style)
+    #[clap(long = "ignore-path")]
+    ignore_paths: Vec<String>,
 }
 
 fn main() -> Result<()> {
@@ -29,48 +32,61 @@ fn main() -> Result<()> {
     let bpe = cl100k_base().unwrap();
 
     // Process files
-    opt.patterns.par_iter().try_for_each(|pattern| {
-        glob(pattern)
-            .with_context(|| format!("Invalid glob pattern: {}", pattern))?
-            .par_bridge()
-            .try_for_each(|entry| {
-                let path = entry.with_context(|| "Glob error".to_string())?;
-                if path.is_dir() {
-                    return Ok(());
-                }
-                let file_content = match fs::read_to_string(&path) {
-                    Ok(content) => content,
-                    Err(e) => {
-                        if e.kind() == std::io::ErrorKind::InvalidData {
-                            println!("Ignored non-UTF8 file: {}", path.display());
-                            return Ok(());
-                        } else {
-                            return Err(anyhow!("Failed to read file: {}", path.display()))
-                                .with_context(|| e.to_string());
-                        }
+    for pattern in &opt.patterns {
+        let mut builder = WalkBuilder::new(pattern);
+        builder
+            .hidden(false)
+            .git_ignore(true)
+            .add_custom_ignore_filename(".gitignore");
+
+        for ignore_path in &opt.ignore_paths {
+            builder.add_ignore(ignore_path);
+        }
+
+        let walker = builder.build();
+
+        walker.par_bridge().try_for_each(|entry| {
+            let entry = entry.with_context(|| "Error walking directory".to_string())?;
+            let path = entry.path();
+
+            if path.is_dir() {
+                return Ok(());
+            }
+
+            let file_content = match fs::read_to_string(path) {
+                Ok(content) => content,
+                Err(e) => {
+                    if e.kind() == std::io::ErrorKind::InvalidData {
+                        println!("Ignored non-UTF8 file: {}", path.display());
+                        return Ok(());
+                    } else {
+                        return Err(anyhow!("Failed to read file: {}", path.display()))
+                            .with_context(|| e.to_string());
                     }
-                };
-                let file_context = format!(
-                    r#"File name: "{}"
+                }
+            };
+
+            let file_context = format!(
+                r#"File name: "{}"
 
 File contents: """
 {}"""
 ----------
 
 "#,
-                    path.display(),
-                    file_content
-                );
-                add_content(
-                    &content,
-                    &current_token_count,
-                    &file_context,
-                    &bpe,
-                    opt.token_limit,
-                )?;
-                Ok(())
-            })
-    })?;
+                path.display(),
+                file_content
+            );
+            add_content(
+                &content,
+                &current_token_count,
+                &file_context,
+                &bpe,
+                opt.token_limit,
+            )?;
+            Ok(())
+        })?;
+    }
 
     // Process commands
     for cmd in &opt.commands {
