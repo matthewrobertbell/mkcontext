@@ -5,24 +5,22 @@ use std::sync::Mutex;
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use clipboard::{ClipboardContext, ClipboardProvider};
-use ignore::WalkBuilder;
-use rayon::prelude::*;
+use globset::{Glob, GlobSetBuilder};
 use tiktoken_rs::cl100k_base;
+use walkdir::WalkDir;
 
 #[derive(Parser)]
 #[clap(version = "0.5.1")]
 struct Opt {
-    /// Glob patterns to process
-    patterns: Vec<String>,
     /// Optional token limit
     #[clap(short = 't', long, default_value = "32000")]
     token_limit: usize,
     /// Commands to execute and include in the output
     #[clap(long = "command", short = 'c')]
     commands: Vec<String>,
-    /// Paths to ignore (git ignore style)
-    #[clap(long = "ignore-path")]
-    ignore_paths: Vec<String>,
+    /// Paths to search (git ignore style)
+    #[clap(long = "glob", short = 'g')]
+    globs: Vec<String>,
 }
 
 fn main() -> Result<()> {
@@ -32,37 +30,49 @@ fn main() -> Result<()> {
     let bpe = cl100k_base().unwrap();
 
     // Process files
-    for pattern in &opt.patterns {
-        let mut builder = WalkBuilder::new(pattern);
-        builder
-            .hidden(false)
-            .git_ignore(true)
-            .add_custom_ignore_filename(".gitignore");
 
-        for ignore_path in &opt.ignore_paths {
-            builder.add_ignore(ignore_path);
+    let mut include_builder = GlobSetBuilder::new();
+    let mut exclude_builder = GlobSetBuilder::new();
+
+    for glob in &opt.globs {
+        if let Some(stripped) = glob.strip_prefix('!') {
+            exclude_builder.add(
+                Glob::new(stripped).map_err(|e| anyhow!("Invalid exclude glob pattern: {}", e))?,
+            );
+        } else {
+            include_builder
+                .add(Glob::new(glob).map_err(|e| anyhow!("Invalid include glob pattern: {}", e))?);
+        }
+    }
+
+    let include_set = include_builder
+        .build()
+        .map_err(|e| anyhow!("Failed to build include globset: {}", e))?;
+    let exclude_set = exclude_builder
+        .build()
+        .map_err(|e| anyhow!("Failed to build exclude globset: {}", e))?;
+
+    for entry in WalkDir::new(".") {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.is_dir() {
+            continue;
         }
 
-        let walker = builder.build();
+        let path_str = path.to_str().ok_or_else(|| anyhow!("Invalid path"))?;
+        let path_str = path_str.strip_prefix("./").unwrap_or(path_str);
 
-        walker.par_bridge().try_for_each(|entry| {
-            let entry = entry.with_context(|| "Error walking directory".to_string())?;
-            let path = entry.path();
-
-            if path.is_dir() {
-                return Ok(());
-            }
-
+        if (include_set.is_match(path_str)) && !exclude_set.is_match(path_str) {
             let file_content = match fs::read_to_string(path) {
                 Ok(content) => content,
                 Err(e) => {
                     if e.kind() == std::io::ErrorKind::InvalidData {
-                        println!("Ignored non-UTF8 file: {}", path.display());
-                        return Ok(());
+                        eprintln!("Ignored non-UTF8 file: {}", path.display());
                     } else {
-                        return Err(anyhow!("Failed to read file: {}", path.display()))
-                            .with_context(|| e.to_string());
+                        eprintln!("Failed to read file: {}", path.display());
                     }
+                    continue;
                 }
             };
 
@@ -84,8 +94,8 @@ File contents: """
                 &bpe,
                 opt.token_limit,
             )?;
-            Ok(())
-        })?;
+            println!("Processed file: {}", path_str);
+        }
     }
 
     // Process commands
@@ -108,6 +118,7 @@ Command output: """
             &bpe,
             opt.token_limit,
         )?;
+        println!("Executed command: {}", cmd);
     }
 
     let current_token_count = *current_token_count.lock().unwrap();
@@ -158,10 +169,8 @@ fn execute_command(cmd: &str) -> Result<String> {
     let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
     let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
 
-    let result = format!(
+    Ok(format!(
         "Exit Status: {}\n\nSTDOUT:\n{}\n\nSTDERR:\n{}",
         exit_status, stdout, stderr
-    );
-
-    Ok(result)
+    ))
 }
