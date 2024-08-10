@@ -10,7 +10,7 @@ use tiktoken_rs::cl100k_base;
 use walkdir::WalkDir;
 
 #[derive(Parser)]
-#[clap(version = "0.7.2")]
+#[clap(version = "0.7.3")]
 struct Opt {
     /// Optional token limit
     #[clap(short = 't', long, default_value = "200000")]
@@ -21,6 +21,9 @@ struct Opt {
     /// Globs to search / exclude
     #[clap(long = "glob", short = 'g')]
     globs: Vec<String>,
+    /// Include all files
+    #[clap(long = "all-files", short = 'a')]
+    all_files: bool,
 }
 
 fn main() -> Result<()> {
@@ -43,6 +46,10 @@ fn main() -> Result<()> {
             include_builder
                 .add(Glob::new(glob).map_err(|e| anyhow!("Invalid include glob pattern: {}", e))?);
         }
+    }
+
+    if opt.all_files {
+        include_builder.add(Glob::new("**/*").unwrap());
     }
 
     let include_set = include_builder
